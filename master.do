@@ -11,7 +11,7 @@ cap which event_plot
 if _rc ssc install event_plot, replace
 
 clear
-cd "/Users/ashleyschafer/Desktop/capstone"
+
 import delimited "Copy of Cleaned State Data - Sheet1.csv", clear
 
 *----------------------------------------------------
@@ -40,8 +40,6 @@ drop if missing(year, state_id, total_crime_rate)
 *----------------------------------------------------
 gen event_time = year - rec_legal_year if treated == 1
 
-//drop if event_time > 7
-
 *****************************************************
 * 1. DID Estimation: Total Crime
 *****************************************************
@@ -66,9 +64,6 @@ bysort state_id (year): gen tag = (_n == 1)
 
 * Now tabulate treatment status for unique states only
 tab treated if tag == 1
-
-
-
 
 *****************************************************
 * 2. DID Estimation: Property Crime
@@ -99,8 +94,6 @@ event_plot, default_look ///
               yline(0, lpattern(dash)) ///
               graphregion(color(white)))
 graph export "att_violent_crime.png", width(2000) replace
-
-
 
 *****************************************************
 * 4. Robustness Placebo Check (Lead = 5 years before)
@@ -164,38 +157,37 @@ estpost tabstat total_crime_rate total_property_crime_rate total_violent_crime_r
     med_house_income unem_rate poverty_rate educ_attainment, by(treated) statistics(mean sd)
 esttab using summary_stats_by_group.rtf, replace
 
-* Create a single entry per treated state
+
 keep if treated == 1
 bysort state_id (year): keep if _n == 1
 
-* Keep only needed variables
+
 keep state rec_legal_year
 
-* List the states and when they legalized
+
 sort rec_legal_year
 list state rec_legal_year, clean
 
-* Optional: export to CSV
+
 export delimited using "treated_states_timing.csv", replace
 
 *****************************************************
 * State Data
 *****************************************************
 
-* RELOAD the data from scratch to undo prior drops
 clear
 import delimited "Copy of Cleaned State Data - Sheet1.csv", clear
 
-* Encode state and create treatment flag
+
 encode state, gen(state_id)
 destring rec_legal_year, replace force
 gen treated = !missing(rec_legal_year)
 
-* Keep one observation per state
+
 bysort state_id (year): gen tag = (_n == 1)
 keep if tag == 1
 
-* Keep only relevant columns
+
 keep state treated rec_legal_year
 sort treated state
 
